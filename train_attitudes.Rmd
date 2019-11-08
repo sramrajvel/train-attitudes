@@ -1,0 +1,46 @@
+---
+title: "train_attitudes"
+author: "Sanjana Ramrajvel"
+date: "11/7/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(infer)
+library(fs)
+
+```
+
+```{r, warning = FALSE}
+
+# create directory, download file & store in tibble, delete directory
+
+dir_create("raw-data")
+url <- 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSaerGnn1tDQfgiyJRl7jnn1Au7Ev6Qt7BwMpl53ZgzAyMnANQfog9y4es4ZExlX5tjEgl0mPIyTGcP/pub?gid=480043959&single=true&output=csv'
+download.file(url, destfile = 'raw-data/trains.csv', mode = "wb")
+trains_data <- read.csv("raw-data/trains.csv")
+dir_delete("raw-data")
+
+# generate 1000 permutations of the data and calculate the difference in medians for each one
+
+dist <- trains_data %>%
+  mutate(treatment = as.factor(treatment)) %>%
+  specify(formula = attitude ~ treatment) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in medians", order = c(1, 0))
+
+# plot as frequency distribution
+
+ggplot(dist, aes(x = stat)) +
+  geom_bar() + 
+  geom_vline(xintercept = 2, colour = "red") +
+  labs(title = "Permutation Null Distribution of Difference in Medians of Attitudes", 
+       subtitle = "Observed difference of 2 is highly unlikely to have occurred by chance",
+       x = "Median Difference between Treated and Untreated Customers",
+       y = "Number of Simulations (out of 1000)")
+
+```
